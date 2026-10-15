@@ -38,7 +38,7 @@ jobs:
       - name: Package public files only
         run: |
           mkdir -p _site/pkg
-          cp index.html style.css app.js worker.js LICENSE THIRD_PARTY_NOTICES.md _site/
+          cp index.html style.css app.js worker.js favicon.svg LICENSE THIRD_PARTY_NOTICES.md _site/
           cp pkg/vtracer_wasm.js pkg/vtracer_wasm_bg.wasm _site/pkg/
           cp -r licenses _site/
       - uses: actions/upload-pages-artifact@v4
