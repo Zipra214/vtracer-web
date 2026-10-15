@@ -1,0 +1,19 @@
+[package]
+name = "vtracer_wasm"
+version = "0.1.0"
+edition = "2021"
+authors = ["Zipra214"]
+description = "VTracer WebAssembly wrapper for client-side raster-to-SVG conversion"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "=0.2.129"
+visioncortex = "=0.8.10"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

@@ -1,0 +1,59 @@
+name: Build and deploy Pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up Rust
+        run: |
+          rustup toolchain install 1.97.1 --profile minimal --component rustfmt --component clippy --target wasm32-unknown-unknown
+          rustup default 1.97.1
+      - name: Check Rust
+        working-directory: crates/vtracer_wasm
+        run: |
+          cargo fmt --check
+          cargo test --locked
+          cargo clippy --locked -- -D warnings
+          cargo build --locked --release --target wasm32-unknown-unknown
+      - name: Generate browser bindings
+        run: |
+          cargo install wasm-bindgen-cli --version 0.2.129 --locked
+          wasm-bindgen --target web --out-dir pkg crates/vtracer_wasm/target/wasm32-unknown-unknown/release/vtracer_wasm.wasm
+      - name: Check browser code and WASM regressions
+        run: |
+          node --check app.js
+          node --check worker.js
+          node test.mjs
+          node tests/wasm-alpha.mjs
+      - uses: actions/configure-pages@v5
+      - name: Package public files only
+        run: |
+          mkdir -p _site/pkg
+          cp index.html style.css app.js worker.js LICENSE THIRD_PARTY_NOTICES.md _site/
+          cp pkg/vtracer_wasm.js pkg/vtracer_wasm_bg.wasm _site/pkg/
+          cp -r licenses _site/
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Vector hóa ảnh thành SVG ngay trong trình duyệt bằng VTracer WebAssembly.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' blob: data:; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>VTracer — Ảnh thành vector</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <header><a class="brand" href="./">V<span>Tracer</span><small>WEB</small></a><a href="https://github.com/Zipra214/vtracer-web" target="_blank" rel="noopener noreferrer">Mã nguồn ↗</a></header>
+  <main>
+    <div class="intro"><p class="eyebrow">RASTER → VECTOR · WEBASSEMBLY</p><h1>Ảnh nhỏ.<br><span>Khả năng lớn.</span></h1><p>Biến ảnh thành SVG có thể chỉnh sửa.<br>Xử lý trên thiết bị, không cần tài khoản.</p></div>
+    <section class="workspace" aria-label="Công cụ vector hóa">
+      <aside class="settings">
+        <h2>01 <span>Ảnh đầu vào</span></h2>
+        <label class="drop" id="drop"><input id="file" type="file" accept="image/png,image/jpeg,image/webp,image/bmp"><strong>Chọn ảnh hoặc kéo thả</strong><span>PNG, JPEG, WebP, BMP · tối đa 20 MB</span><span>Cũng có thể dán ảnh bằng Ctrl / ⌘ + V</span></label>
+        <p id="file-info" class="muted">Chưa chọn ảnh · tối đa 16 triệu pixel</p>
+        <fieldset id="options">
+          <legend>02 <span>Thiết lập vector</span></legend>
+          <label for="preset">Mức chi tiết</label>
+          <select id="preset"><option value="don_gian">Đồ họa phẳng (Ít nét) — mặc định</option><option value="can_bang">Cân bằng</option><option value="chi_tiet">Giữ chi tiết cao</option></select>
+          <p id="preset-info" class="muted">Khối màu lớn, ít path, phù hợp in ấn và cắt decal.</p>
+          <div class="alpha"><p>Nền ảnh</p><label><input type="radio" name="alpha" value="preserve" checked> Giữ nền trong suốt</label><label><input type="radio" name="alpha" value="white_background"> Ghép trên nền trắng</label></div>
+          <p class="muted">Giữ alpha: dưới 128 thành trong suốt, từ 128 thành đục. Không tự xóa nền trắng có sẵn.</p>
+        </fieldset>
+        <div class="actions"><button id="convert" disabled>Chuyển thành SVG <span>↗</span></button><button id="cancel" class="secondary" hidden>Hủy xử lý</button></div>
+        <p id="status" role="status" aria-live="polite">Chọn ảnh để bắt đầu.</p>
+      </aside>
+      <div class="previews" id="previews" aria-busy="false">
+        <div class="preview-head"><h2>03 <span>Xem trước</span></h2><span class="badge">SVG · VECTOR</span></div>
+        <div class="preview-grid">
+          <figure><figcaption>Ảnh gốc <span id="source-size"></span></figcaption><div class="canvas"><img id="source" alt="Ảnh gốc đã chọn" hidden><p id="source-empty">Ảnh của bạn xuất hiện ở đây</p></div></figure>
+          <figure><figcaption>Kết quả <span id="result-size"></span></figcaption><div class="canvas"><img id="result" alt="Kết quả vector SVG" hidden><p id="result-empty">Vector sắc nét ở mọi kích thước</p></div></figure>
+        </div>
+        <div class="result-bar"><p id="stats">Đầu ra SVG thuần path, không nhúng ảnh raster.</p><a id="download" class="download" hidden>Tải SVG ↓</a></div>
+        <p class="privacy">Ảnh không được mã ứng dụng tải lên máy chủ. Website vẫn tải HTML, JavaScript và WASM từ GitHub Pages.</p>
+      </div>
+    </section>
+    <footer><span>VTracer + visioncortex · Mã nguồn mở</span><span>Chuyển sắc và chi tiết nhỏ có thể thay đổi khi vector hóa.</span></footer>
+  </main>
+</body>
+</html>
