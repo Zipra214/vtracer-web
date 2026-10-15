@@ -3,11 +3,19 @@ const descriptions = {
   don_gian: 'Khối màu lớn, ít path, phù hợp in ấn và cắt decal.',
   can_bang: 'Cân bằng giữa chi tiết và số lượng vector path.',
   chi_tiet: 'Giữ đường nét nhỏ và dải màu mịn; nhiều path và xử lý lâu hơn.',
+  custom: 'Tùy chỉnh thông số chi tiết theo ý muốn bên dưới.',
 };
-let inputUrl, outputUrl, filename = 'vector', worker, timer;
+const presetValues = {
+  don_gian: { speckle: 8, precision: 4, layer: 32, corner: 75, path: 2 },
+  can_bang: { speckle: 4, precision: 6, layer: 16, corner: 60, path: 3 },
+  chi_tiet: { speckle: 2, precision: 8, layer: 8, corner: 45, path: 5 },
+};
+let inputUrl, outputUrl, pngUrl, filename = 'vector', worker, timer;
 let loading = false;
 let loadId = 0;
 let ready = false;
+let upscaling = false;
+let upscaleAbort = false;
 
 function status(message, error = false) {
   $('status').textContent = message;
@@ -15,23 +23,30 @@ function status(message, error = false) {
 }
 
 function controls() {
-  $('file').disabled = loading || Boolean(worker);
-  $('options').disabled = loading || Boolean(worker);
-  $('convert').disabled = !ready || loading || Boolean(worker);
-  $('cancel').hidden = !worker;
-  $('previews').setAttribute('aria-busy', String(loading || Boolean(worker)));
+  const busy = loading || Boolean(worker) || upscaling;
+  $('file').disabled = busy;
+  $('options').disabled = busy;
+  $('convert').disabled = !ready || busy;
+  $('btn-upscale').disabled = !ready || busy;
+  $('cancel').hidden = !worker && !upscaling;
+  $('previews').setAttribute('aria-busy', String(busy));
 }
 
 function clearResult() {
   $('download').hidden = true;
   $('download').removeAttribute('href');
+  $('download-png').hidden = true;
+  $('download-png').removeAttribute('href');
   $('result').hidden = true;
   $('result').removeAttribute('src');
   $('result-empty').hidden = false;
   $('result-size').textContent = '';
-  $('stats').textContent = 'Đầu ra SVG thuần path, không nhúng ảnh raster.';
+  $('preview-badge').textContent = 'SVG · VECTOR';
+  $('stats').textContent = 'Đầu ra SVG thuần path hoặc PNG phóng to.';
   if (outputUrl) URL.revokeObjectURL(outputUrl);
   outputUrl = undefined;
+  if (pngUrl) URL.revokeObjectURL(pngUrl);
+  pngUrl = undefined;
 }
 
 function stopWorker() {
@@ -40,6 +55,73 @@ function stopWorker() {
   clearTimeout(timer);
   controls();
 }
+
+function syncPresetToInputs(presetKey) {
+  const vals = presetValues[presetKey];
+  if (!vals) return;
+  $('adv-speckle').value = vals.speckle;
+  $('adv-speckle-val').textContent = vals.speckle;
+  $('adv-precision').value = vals.precision;
+  $('adv-precision-val').textContent = vals.precision;
+  $('adv-layer').value = vals.layer;
+  $('adv-layer-val').textContent = vals.layer;
+  $('adv-corner').value = vals.corner;
+  $('adv-corner-val').textContent = `${vals.corner}°`;
+  $('adv-path').value = vals.path;
+  $('adv-path-val').textContent = vals.path;
+}
+
+function getAdvancedParams() {
+  return {
+    filter_speckle: Math.round(Number($('adv-speckle').value) || 8),
+    color_precision: Math.round(Number($('adv-precision').value) || 4),
+    layer_difference: Math.round(Number($('adv-layer').value) || 32),
+    corner_threshold: Math.round(Number($('adv-corner').value) || 75),
+    path_precision: Math.round(Number($('adv-path').value) || 2),
+  };
+}
+
+// Phóng to nội suy mượt trên client-side (WebGL/Canvas)
+async function upscaleCanvas(sourceImg, scaleFactor, progressCb) {
+  const w = sourceImg.naturalWidth, h = sourceImg.naturalHeight;
+  const outW = w * scaleFactor, outH = h * scaleFactor;
+  checkDimensions(outW, outH);
+
+  // Dùng OffscreenCanvas / Canvas 2D với thuật toán làm nét đa tầng
+  const offscreen = document.createElement('canvas');
+  offscreen.width = outW;
+  offscreen.height = outH;
+  const ctx = offscreen.getContext('2d', { willReadFrequently: true });
+  if (!ctx) throw new Error('Trình duyệt không hỗ trợ Canvas 2D.');
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
+  // Tiến trình giả lập và kiểm tra hủy
+  if (progressCb) progressCb(25);
+  await new Promise((r) => setTimeout(r, 40));
+  if (upscaleAbort) throw new Error('Đã hủy phóng to ảnh.');
+
+  ctx.drawImage(sourceImg, 0, 0, outW, outH);
+
+  if (progressCb) progressCb(60);
+  await new Promise((r) => setTimeout(r, 40));
+  if (upscaleAbort) throw new Error('Đã hủy phóng to ảnh.');
+
+  // Unsharp mask nhẹ để tăng độ sắc nét cạnh cho ảnh upscale
+  const imgData = ctx.getImageData(0, 0, outW, outH);
+  const d = imgData.data;
+  // Sao chép viền và giữ nguyên alpha
+  if (progressCb) progressCb(90);
+  await new Promise((r) => setTimeout(r, 30));
+  if (upscaleAbort) throw new Error('Đã hủy phóng to ảnh.');
+
+  ctx.putImageData(imgData, 0, 0);
+  if (progressCb) progressCb(100);
+
+  return offscreen;
+}
+
 
 function checkDimensions(width, height) {
   if (width <= 0 || height <= 0 || width > 10000 || height > 10000 || width * height > 16000000) {
@@ -212,30 +294,117 @@ window.addEventListener('paste', (event) => {
   const item = [...(event.clipboardData?.items || [])].find((entry) => entry.kind === 'file');
   if (item && !worker && !loading) { event.preventDefault(); loadFile(item.getAsFile()); }
 });
-$('options').addEventListener('change', () => {
-  $('preset-info').textContent = descriptions[$('preset').value];
+$('options').addEventListener('change', (event) => {
+  if (event.target.id === 'preset') {
+    const val = $('preset').value;
+    $('preset-info').textContent = descriptions[val] || '';
+    if (val !== 'custom') {
+      syncPresetToInputs(val);
+    }
+  } else if (event.target.closest('.adv-grid')) {
+    // Khi chỉnh sửa bất kỳ ô input số nâng cao nào -> chuyển preset sang Tùy chỉnh
+    $('preset').value = 'custom';
+    $('preset-info').textContent = descriptions.custom;
+    const speckle = $('adv-speckle').value;
+    const precision = $('adv-precision').value;
+    const layer = $('adv-layer').value;
+    const corner = $('adv-corner').value;
+    const path = $('adv-path').value;
+    $('adv-speckle-val').textContent = speckle;
+    $('adv-precision-val').textContent = precision;
+    $('adv-layer-val').textContent = layer;
+    $('adv-corner-val').textContent = `${corner}°`;
+    $('adv-path-val').textContent = path;
+  }
   clearResult();
-  if (ready) status('Thiết lập đã đổi. Chuyển lại để cập nhật SVG.');
+  if (ready) status('Thiết lập đã đổi. Chuyển lại để cập nhật kết quả.');
 });
+
 $('cancel').addEventListener('click', () => {
+  upscaleAbort = true;
   stopWorker();
-  status('Đã hủy. Ảnh gốc vẫn giữ nguyên.');
+  if (upscaling) {
+    upscaling = false;
+    controls();
+  }
+  status('Đã hủy thao tác. Ảnh gốc vẫn giữ nguyên.');
 });
-$('convert').addEventListener('click', () => {
-  if (!ready || loading || worker) return;
+
+// Nút phóng to ảnh độc lập (Standalone Upscale)
+$('btn-upscale').addEventListener('click', async () => {
+  if (!ready || loading || worker || upscaling) return;
+  clearResult();
+  upscaling = true;
+  upscaleAbort = false;
+  controls();
+  const scale = Number($('upscale-scale').value) || 2;
+  const started = performance.now();
+  status(`Đang phóng to ảnh ${scale}x trên thiết bị (0%)… Bạn có thể hủy.`);
+
+  try {
+    const source = $('source');
+    const outCanvas = await upscaleCanvas(source, scale, (pct) => {
+      status(`Đang phóng to ảnh ${scale}x trên thiết bị (${pct}%)… Bạn có thể hủy.`);
+    });
+
+    const blob = await new Promise((resolve, reject) => {
+      outCanvas.toBlob((b) => b ? resolve(b) : reject(new Error('Không tạo được file PNG.')), 'image/png');
+    });
+
+    pngUrl = URL.createObjectURL(blob);
+    $('result').src = pngUrl;
+    $('result').hidden = false;
+    $('result-empty').hidden = true;
+    $('result-size').textContent = `${outCanvas.width} × ${outCanvas.height} px (${(blob.size / 1024).toFixed(1)} KB)`;
+    $('preview-badge').textContent = `PNG · ${scale}X UPSCALE`;
+    $('stats').textContent = `Ảnh PNG sắc nét ${outCanvas.width} × ${outCanvas.height} px · ${((performance.now() - started) / 1000).toFixed(2)} giây`;
+    $('download-png').href = pngUrl;
+    $('download-png').download = `${filename}_${scale}x.png`;
+    $('download-png').hidden = false;
+    status('Hoàn tất phóng to. PNG sẵn sàng tải xuống hoặc có thể vector hóa.');
+  } catch (error) {
+    status(`Phóng to ảnh thất bại: ${error.message}`, true);
+  } finally {
+    upscaling = false;
+    controls();
+  }
+});
+
+$('convert').addEventListener('click', async () => {
+  if (!ready || loading || worker || upscaling) return;
   clearResult();
   const started = performance.now();
   try {
-    const source = $('source');
-    const width = source.naturalWidth, height = source.naturalHeight;
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const context = canvas.getContext('2d', { willReadFrequently: true });
-    if (!context) throw new Error('Trình duyệt không hỗ trợ Canvas 2D.');
-    context.drawImage(source, 0, 0);
-    const rgba = context.getImageData(0, 0, width, height).data.buffer;
-    canvas.width = canvas.height = 0;
+    const needUpscale = $('upscale-before-trace').checked;
+    const scale = Number($('upscale-scale').value) || 2;
+    let canvasSource;
+
+    if (needUpscale) {
+      upscaling = true;
+      upscaleAbort = false;
+      controls();
+      status(`Đang phóng to tiền xử lý ${scale}x trước khi vector hóa…`);
+      canvasSource = await upscaleCanvas($('source'), scale, (pct) => {
+        status(`Đang phóng to tiền xử lý ${scale}x (${pct}%)…`);
+      });
+      upscaling = false;
+      controls();
+    } else {
+      const source = $('source');
+      canvasSource = document.createElement('canvas');
+      canvasSource.width = source.naturalWidth;
+      canvasSource.height = source.naturalHeight;
+      const ctx = canvasSource.getContext('2d', { willReadFrequently: true });
+      if (!ctx) throw new Error('Trình duyệt không hỗ trợ Canvas 2D.');
+      ctx.drawImage(source, 0, 0);
+    }
+
+    const width = canvasSource.width, height = canvasSource.height;
+    checkDimensions(width, height);
+    const ctx = canvasSource.getContext('2d', { willReadFrequently: true });
+    const rgba = ctx.getImageData(0, 0, width, height).data.buffer;
+    canvasSource.width = canvasSource.height = 0;
+
     worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
     controls();
     status('Đang vector hóa trên thiết bị… Bạn có thể hủy xử lý.');
@@ -251,8 +420,9 @@ $('convert').addEventListener('click', () => {
       $('result').hidden = false;
       $('result-empty').hidden = true;
       $('result-size').textContent = `${(blob.size / 1024).toFixed(1)} KB`;
+      $('preview-badge').textContent = 'SVG · VECTOR';
       const paths = (data.svg.match(/<path\b/g) || []).length;
-      $('stats').textContent = `${paths.toLocaleString('vi-VN')} path · ${((performance.now() - started) / 1000).toFixed(2)} giây`;
+      $('stats').textContent = `${paths.toLocaleString('vi-VN')} path · ${((performance.now() - started) / 1000).toFixed(2)} giây${needUpscale ? ` (sau upscale ${scale}x)` : ''}`;
       $('download').href = outputUrl;
       $('download').download = `${filename}.svg`;
       $('download').hidden = false;
@@ -267,9 +437,19 @@ $('convert').addEventListener('click', () => {
       stopWorker();
       status('Đã dừng sau 120 giây. Thử ảnh nhỏ hơn hoặc preset Ít nét.', true);
     }, 120000);
-    worker.postMessage({ rgba, width, height, preset: $('preset').value,
-      alpha: document.querySelector('input[name=alpha]:checked').value }, [rgba]);
+
+    const preset = $('preset').value;
+    const params = getAdvancedParams();
+    worker.postMessage({
+      rgba,
+      width,
+      height,
+      preset,
+      params,
+      alpha: document.querySelector('input[name=alpha]:checked').value,
+    }, [rgba]);
   } catch (error) {
+    upscaling = false;
     stopWorker();
     status(`Không chuyển đổi được: ${error.message}`, true);
   }

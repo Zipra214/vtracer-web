@@ -125,4 +125,27 @@ release(png(100, 200));
 await pending;
 assert.equal(objectUrls, before, 'stale read must not decode or create URL');
 assert.equal(element('convert').disabled, true);
-console.log('Image header, predecode limits, and pagehide assertions passed.');
+
+// Advanced controls sync and bounds tests
+context.syncPresetToInputs('chi_tiet');
+assert.equal(element('adv-speckle').value, 2);
+assert.equal(element('adv-precision').value, 8);
+assert.equal(element('adv-layer').value, 8);
+assert.equal(element('adv-corner').value, 45);
+assert.equal(element('adv-path').value, 5);
+context.syncPresetToInputs('don_gian');
+assert.equal(element('adv-speckle').value, 8);
+assert.equal(element('adv-precision').value, 4);
+
+const params = context.getAdvancedParams();
+assert.equal(params.filter_speckle, 8);
+assert.equal(params.color_precision, 4);
+assert.equal(params.layer_difference, 32);
+assert.equal(params.corner_threshold, 75);
+assert.equal(params.path_precision, 2);
+
+// Upscale checkbox defaults to OFF (false)
+assert.equal(Boolean(element('upscale-before-trace').checked), false);
+
+console.log('Image header, predecode limits, advanced parameters, and pagehide assertions passed.');
+

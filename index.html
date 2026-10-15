@@ -22,21 +22,69 @@
         <fieldset id="options">
           <legend>02 <span>Thiết lập vector</span></legend>
           <label for="preset">Mức chi tiết</label>
-          <select id="preset"><option value="don_gian">Đồ họa phẳng (Ít nét) — mặc định</option><option value="can_bang">Cân bằng</option><option value="chi_tiet">Giữ chi tiết cao</option></select>
+          <select id="preset"><option value="don_gian">Đồ họa phẳng (Ít nét) — mặc định</option><option value="can_bang">Cân bằng</option><option value="chi_tiet">Giữ chi tiết cao</option><option value="custom">Tùy chỉnh thông số</option></select>
           <p id="preset-info" class="muted">Khối màu lớn, ít path, phù hợp in ấn và cắt decal.</p>
           <div class="alpha"><p>Nền ảnh</p><label><input type="radio" name="alpha" value="preserve" checked> Giữ nền trong suốt</label><label><input type="radio" name="alpha" value="white_background"> Ghép trên nền trắng</label></div>
           <p class="muted">Giữ alpha: dưới 128 thành trong suốt, từ 128 thành đục. Không tự xóa nền trắng có sẵn.</p>
+
+          <details id="advanced-details" class="advanced-box">
+            <summary>Tùy chọn nâng cao (Tùy chỉnh thông số)</summary>
+            <div class="adv-grid">
+              <div class="adv-field">
+                <div class="adv-label-row"><label for="adv-speckle">Lọc hạt nhiễu (filter_speckle)</label><span class="adv-val" id="adv-speckle-val">8</span></div>
+                <input id="adv-speckle" type="number" min="0" max="100" step="1" value="8">
+                <small class="muted">Loại bỏ đốm màu nhỏ hơn diện tích pixel² (0–100). Số càng lớn càng sạch hạt nhiễu, SVG càng nhẹ.</small>
+              </div>
+              <div class="adv-field">
+                <div class="adv-label-row"><label for="adv-precision">Độ chính xác màu (color_precision)</label><span class="adv-val" id="adv-precision-val">4</span></div>
+                <input id="adv-precision" type="number" min="1" max="8" step="1" value="4">
+                <small class="muted">Số bit màu giữ lại mỗi kênh (1–8). Mức 8 giữ nguyên màu; mức thấp gom màu thành mảng phẳng.</small>
+              </div>
+              <div class="adv-field">
+                <div class="adv-label-row"><label for="adv-layer">Chênh lệch lớp màu (layer_difference)</label><span class="adv-val" id="adv-layer-val">32</span></div>
+                <input id="adv-layer" type="number" min="0" max="255" step="1" value="32">
+                <small class="muted">Ngưỡng tách biệt giữa các lớp màu chồng (0–255). Số lớn cho khối màu đơn giản; số nhỏ giữ nhiều lớp.</small>
+              </div>
+              <div class="adv-field">
+                <div class="adv-label-row"><label for="adv-corner">Ngưỡng góc nhọn (corner_threshold)</label><span class="adv-val" id="adv-corner-val">75°</span></div>
+                <input id="adv-corner" type="number" min="0" max="180" step="1" value="75">
+                <small class="muted">Góc nhỏ hơn ngưỡng này sẽ giữ nhọn; lớn hơn sẽ làm mượt thành đường cong (0–180 độ).</small>
+              </div>
+              <div class="adv-field">
+                <div class="adv-label-row"><label for="adv-path">Độ mịn đường cong (path_precision)</label><span class="adv-val" id="adv-path-val">2</span></div>
+                <input id="adv-path" type="number" min="-1" max="8" step="1" value="2">
+                <small class="muted">Số chữ số thập phân tọa độ SVG (-1 đến 8). Mức 2–3 tối ưu cho web; 5–8 cho in ấn; -1 giữ nguyên số thực.</small>
+              </div>
+            </div>
+          </details>
+
+          <div class="upscale-box">
+            <p class="upscale-title">Phóng to ảnh (Upscale AI)</p>
+            <label class="check-label"><input id="upscale-before-trace" type="checkbox"> Phóng to làm nét trước khi vector hóa</label>
+            <div class="upscale-row">
+              <label for="upscale-scale">Tỉ lệ</label>
+              <select id="upscale-scale"><option value="2">2x (Khuyên dùng)</option><option value="4">4x</option></select>
+              <button id="btn-upscale" type="button" class="secondary" disabled>Chỉ phóng to ảnh</button>
+            </div>
+            <p id="upscale-info" class="muted">Xử lý trực tiếp trên thiết bị (WebGL). Nút "Chỉ phóng to ảnh" cho phép tải file PNG sắc nét mà không cần tạo vector.</p>
+          </div>
         </fieldset>
         <div class="actions"><button id="convert" disabled>Chuyển thành SVG <span>↗</span></button><button id="cancel" class="secondary" hidden>Hủy xử lý</button></div>
         <p id="status" role="status" aria-live="polite">Chọn ảnh để bắt đầu.</p>
       </aside>
       <div class="previews" id="previews" aria-busy="false">
-        <div class="preview-head"><h2>03 <span>Xem trước</span></h2><span class="badge">SVG · VECTOR</span></div>
+        <div class="preview-head"><h2>03 <span>Xem trước</span></h2><span class="badge" id="preview-badge">SVG · VECTOR</span></div>
         <div class="preview-grid">
           <figure><figcaption>Ảnh gốc <span id="source-size"></span></figcaption><div class="canvas"><img id="source" alt="Ảnh gốc đã chọn" hidden><p id="source-empty">Ảnh của bạn xuất hiện ở đây</p></div></figure>
-          <figure><figcaption>Kết quả <span id="result-size"></span></figcaption><div class="canvas"><img id="result" alt="Kết quả vector SVG" hidden><p id="result-empty">Vector sắc nét ở mọi kích thước</p></div></figure>
+          <figure><figcaption>Kết quả <span id="result-size"></span></figcaption><div class="canvas"><img id="result" alt="Kết quả vector SVG hoặc PNG phóng to" hidden><p id="result-empty">Vector sắc nét hoặc PNG phóng to</p></div></figure>
         </div>
-        <div class="result-bar"><p id="stats">Đầu ra SVG thuần path, không nhúng ảnh raster.</p><a id="download" class="download" hidden>Tải SVG ↓</a></div>
+        <div class="result-bar">
+          <p id="stats">Đầu ra SVG thuần path, không nhúng ảnh raster.</p>
+          <div class="download-group">
+            <a id="download" class="download" hidden>Tải SVG ↓</a>
+            <a id="download-png" class="download download-png" hidden>Tải PNG phóng to ↓</a>
+          </div>
+        </div>
         <p class="privacy">Ảnh không được mã ứng dụng tải lên máy chủ. Website vẫn tải HTML, JavaScript và WASM từ GitHub Pages.</p>
       </div>
     </section>
