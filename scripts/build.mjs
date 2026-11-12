@@ -19,8 +19,12 @@ for (const file of uiFiles) {
   await mkdir(new URL('.', target), { recursive: true });
   await copyFile(new URL(ui+file, root), target);
 }
-await writeFile(new URL('_site/index.html', root), '<!doctype html><html lang="vi"><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=./'+ui+'index.html"><title>VTracer</title><a href="./'+ui+'index.html">Mở VTracer</a></html>\n');
-assert.match(await readFile(new URL('_site/index.html',root),'utf8'), /vectorizer-reference/);
+const landing = (await readFile(new URL(ui+'index.html', root), 'utf8')).replace(/\b(src|href)="(?!#|\/|[a-z][a-z\d+.-]*:)([^"]+)"/gi, (_, attribute, value) => `${attribute}="${new URL(value, 'https://build.invalid/'+ui).pathname.slice(1)}${new URL(value, 'https://build.invalid/'+ui).search}"`);
+await writeFile(new URL('_site/index.html', root), landing);
+assert.doesNotMatch(landing, /http-equiv="refresh"/);
+assert.match(landing, /href="favicon\.svg"/);
+assert.ok(landing.includes(`src="${ui}reference.js?`));
+for (const [, value] of landing.matchAll(/\b(?:src|href)="([^"#][^"]*)"/g)) await access(new URL('_site/'+value.split('?')[0], root));
 for (const file of uiFiles) await access(new URL('_site/'+ui+file,root));
 assert.ok(!existsSync(new URL('_site/'+ui+'assets/welcome-sunburst-20261111/source/',root)), 'Source artwork must not ship');
 console.log('Approved UI packaged in _site; no source images, node_modules, or backups included.');

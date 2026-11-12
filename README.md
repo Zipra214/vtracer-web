@@ -4,7 +4,7 @@ Studio vector tiếng Việt, xử lý trong trình duyệt. VTracer + visioncor
 
 ## Giao diện đang phát hành
 
-GitHub Pages mở giao diện đã duyệt tại `opendesign/mockups/vectorizer-reference/`; trang gốc chuyển hướng bằng đường dẫn tương đối. Mã Studio cũ giữ trong repo để tham khảo, không phải trang vào hiện tại.
+GitHub Pages phục vụ giao diện đã duyệt ngay tại `/vtracer-web/`, không chuyển hướng sang thư mục mockup. Build lấy giao diện từ `opendesign/mockups/vectorizer-reference/` và đổi đường dẫn tài nguyên tương đối cho trang gốc. Mã Studio cũ giữ trong repo để tham khảo, không phải trang vào hiện tại.
 
 - Chọn/kéo/dán ảnh; Vector hóa và Upscale độc lập. So sánh hai khung; Chỉnh sửa dành cho SVG với palette bong bóng gộp/tách/đổi/xóa màu. Mũi tên cạnh panel để thu/mở công cụ.
 - Thanh Upscale 0–4×, bước 0,1. 0 giữ gốc; dưới 1 thu nhỏ lọc diện tích, không AI; từ 1 dùng ESRGAN Slim x2/x4 theo ô rồi lấy mẫu về kích thước yêu cầu. Hai khung Upscale zoom/pan riêng; 1:1 dùng pixel thật.
