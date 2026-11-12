@@ -1,0 +1,22 @@
+{
+  "name": "vtracer-local-studio",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "vendor": "node scripts/vendor.mjs",
+    "test": "node test.mjs && node tests/wasm-alpha.mjs && node tests/raster.mjs && node tests/exports.mjs && node tests/geometry.mjs && node tests/background-ai.mjs",
+    "build": "npm run vendor && node scripts/build.mjs"
+  },
+  "dependencies": {
+    "@tensorflow/tfjs": "4.11.0",
+    "@upscalerjs/esrgan-slim": "1.0.0",
+    "jspdf": "4.2.1",
+    "onnxruntime-web": "1.31.1",
+    "svg2pdf.js": "2.9.0",
+    "upscaler": "1.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

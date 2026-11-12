@@ -1,39 +1,73 @@
-# VTracer Web
+# VTracer Studio
 
-Vector hóa ảnh thành SVG trong trình duyệt, giao diện tiếng Việt. Rust + visioncortex biên dịch sang WebAssembly; xử lý bằng Web Worker. Không backend xử lý ảnh, không tài khoản, không CDN hay telemetry trong mã ứng dụng.
+Studio vector tiếng Việt, xử lý trong trình duyệt. VTracer + visioncortex chạy WASM trong Worker. Không tài khoản, backend xử lý ảnh, telemetry hay upload ảnh. Thư viện/model self-host cùng website.
 
-## Dùng
+## Giao diện đang phát hành
 
-Chọn/kéo thả PNG, JPEG, WebP, BMP hoặc dán ảnh bằng Ctrl+V / Command+V. Chọn preset, xử lý nền, chuyển đổi rồi tải SVG. Trình duyệt quyết định thư mục tải xuống; web không tự ghi nhớ đường dẫn như desktop.
+GitHub Pages mở giao diện đã duyệt tại `opendesign/mockups/vectorizer-reference/`; trang gốc chuyển hướng bằng đường dẫn tương đối. Mã Studio cũ giữ trong repo để tham khảo, không phải trang vào hiện tại.
 
-- Tối đa 20 MiB/file, 10.000 pixel mỗi chiều, 16 triệu pixel tổng cộng. Ảnh phức tạp vẫn có thể hết bộ nhớ. Kích thước kiểm tra trước (qua header) và sau khi browser giải mã.
-- Giữ alpha: <128 thành trong suốt; ≥128 thành đục. Không giữ bán trong suốt, không tự xóa nền trắng đục. Viền mềm có thể thay đổi.
-- Ghép nền trắng: composite RGBA lên trắng trước khi trace.
-- PNG/WebP động: chỉ frame browser giải mã lúc nạp; không xuất hoạt ảnh.
-- Preset khớp tham số desktop, nhưng engine/runtime khác nên không bảo đảm SVG giống từng byte.
-- Hủy bằng kết thúc Worker; tự dừng sau 120 giây. SVG dùng path, không nhúng raster; không chứng nhận chất lượng in/CMYK.
+- Chọn/kéo/dán ảnh; Vector hóa và Upscale độc lập. So sánh hai khung; Chỉnh sửa dành cho SVG với palette bong bóng gộp/tách/đổi/xóa màu. Mũi tên cạnh panel để thu/mở công cụ.
+- Thanh Upscale 0–4×, bước 0,1. 0 giữ gốc; dưới 1 thu nhỏ lọc diện tích, không AI; từ 1 dùng ESRGAN Slim x2/x4 theo ô rồi lấy mẫu về kích thước yêu cầu. Hai khung Upscale zoom/pan riêng; 1:1 dùng pixel thật.
+- Preset: ngưỡng góc 85, độ dài đoạn 1, ngưỡng nối 30, tọa độ SVG 5 chữ số, tối đa 20 vòng. Các thông số màu/lọc nhiễu khác theo preset.
+- Bóng palette dùng bounding box path ước lượng, không phải tỷ lệ mực/pixel chính xác. Cụm nhiều sắc có phân trang; màu gốc là màu trace trước chỉnh sửa.
+- `tests/upscale-quality.html` kiểm tra hai ảnh trang trí giảm kích thước/làm mờ. AI cải thiện nhẹ trên hai mẫu, không chứng minh mọi ảnh đều nét hơn hay phục hồi được chi tiết mất.
 
-Ảnh được mã ứng dụng xử lý trong bộ nhớ browser, không gửi lên máy chủ. GitHub Pages vẫn phục vụ file web và có thể ghi log HTTP thông thường. Extension/trình duyệt ngoài phạm vi bảo đảm của app. Không service worker, PWA hay cam kết mở lại khi mất mạng.
+## Studio cũ (giữ tham khảo)
 
-## Build
+### Quy trình
 
-Cần Rust 1.97.1, target `wasm32-unknown-unknown`, wasm-bindgen CLI **0.2.129**. Giữ Cargo.lock. Chạy từ thư mục gốc:
+1. Chọn PNG, JPEG, WebP, BMP; kéo thả, clipboard hoặc ảnh mẫu tạo tại máy.
+2. Chuẩn bị (tùy chọn): cắt ảnh, xóa nền màu từ mép/toàn ảnh hoặc AI U²-Net compact, gom bảng màu. Upscale độc lập 2×/4× xuất PNG hoặc bật tiền xử lý trước trace (mặc định tắt).
+3. Vector hóa: preset đồng bộ đủ 8 thông số, spline/đa giác/biên pixel, chồng lớp/khoét vùng. Thử khớp chữ nhật/elip là tùy chọn bảo thủ, không phải engine Vectorizer.AI.
+4. Chỉnh & xuất: đổi/xóa vùng hay mọi vùng cùng màu; hoàn tác 12 bước. SVG/PDF/EPS/DXF/PNG, khổ mm, giữ tỷ lệ. Zoom/pan đồng bộ và thanh so sánh.
+
+Không lấy mã hay dùng API độc quyền Vectorizer.AI. Giao diện riêng, tích hợp thư viện có giấy phép.
+
+## Giới hạn
+
+- 20 MiB/file, 10.000 px mỗi chiều, 16 triệu pixel. Kiểm header trước decode và kích thước sau decode. AI upscale đầu vào tối đa 4.096 px mỗi chiều; đầu ra theo giới hạn chung. Không đảm bảo mọi ảnh trong giới hạn đều đủ RAM.
+- Editor từ chối SVG trên 20 triệu ký tự hoặc 20.000 vùng trước khi vào DOM. Giảm màu hoặc tăng lọc nhiễu nếu vượt.
+- Trace alpha nhị phân: <128 trong suốt, ≥128 đục. PNG giữ alpha mềm. Không tự xóa trắng nếu chưa chọn xóa nền.
+- Xóa màu từ mép giữ đảo cùng màu bị bao kín; xóa toàn màu có thể mất trắng bên trong. Lấy màu từ ảnh gốc. U²-Net-p nhận chủ thể ở 320×320: tóc/nét mảnh hoặc nền phức tạp có thể mất.
+- ESRGAN Slim x2/x4 tự thử WebGL và convolution thật, thất bại thì CPU. Không chứng minh được GPU rời/tích hợp hay hardware từ trình duyệt. CPU chậm, hủy giữa tile, không ngắt được kernel đang chạy. Nội suy Canvas + unsharp mask là lựa chọn nhanh, không phải AI.
+- AI có thể đổi nét/chữ và thêm chi tiết giả, không khôi phục chắc chắn chi tiết đã mất. Alpha được phóng to riêng rồi ghép. Không khẳng định ESRGAN tốt nhất mọi ảnh.
+- Khớp hình học chỉ contour đơn, không lỗ, đủ gần chữ nhật/elip. Elip xuất bằng 4 cubic Bézier, không phải primitive chính xác. Mặc định tắt; có hoàn tác. Không suy luận đối xứng/đồ thị biên chung độc quyền.
+- SVG/PDF/EPS vector; PNG raster theo mm/DPI có pHYs metadata. EPS không alpha mềm. DXF R12 chỉ polyline đường biên xấp xỉ 0,05 mm, ACI gần nhất, không tô vùng/centerline. Kiểm lớp chồng và đường cắt trùng trước sản xuất. DXF dùng tọa độ mm, phần mềm nhận có thể cần chọn đơn vị mm.
+- RGB, không chứng nhận CMYK/ICC/PDF/X hay mẫu in thực tế. Preview vùng cắt căn giữa giữ tỷ lệ, không ánh xạ vị trí gốc; zoom 100% theo ảnh gốc.
+- Worker trace/xử lý hạn 180 giây. Hủy/rời trang không công bố kết quả muộn. PNG/WebP động chỉ frame browser giải mã, không xuất hoạt ảnh.
+- Lần đầu cần mạng tải web/model cùng origin. Không CDN runtime, service worker/PWA hay cam kết mở lại offline. GitHub Pages vẫn có thể ghi log HTTP; extension/browser ngoài phạm vi bảo đảm.
+
+## Build / chạy
+
+Node 24+, npm. Rust 1.97.1, target wasm32-unknown-unknown và wasm-bindgen CLI 0.2.129 nếu dựng lại WASM. File pkg có sẵn cho phát triển UI.
 
 ```bash
-rustup target add wasm32-unknown-unknown
+npm ci --ignore-scripts
 ```
 
 ```bash
-cargo install wasm-bindgen-cli --version 0.2.129 --locked
+npm run build
+```
+
+Build bundle PDF/TFJS/Upscaler, model Slim từ package khóa phiên bản; tải U²-Net-p từ release rembg, kiểm SHA-256 cố định. Whitelist file công khai vào `_site/`; không node_modules, backup hay ảnh người dùng. Giấy phép trong THIRD_PARTY_NOTICES.md.
+
+```bash
+python -m http.server 8080 --bind 127.0.0.1 --directory _site
+```
+
+Không mở file://. Đường dẫn tương đối hỗ trợ subpath GitHub Pages.
+
+```bash
+npm test
 ```
 
 ```bash
-cargo test --locked --manifest-path crates/vtracer_wasm/Cargo.toml
+node tests/upscale-ai.mjs
 ```
 
-```bash
-cargo clippy --locked --manifest-path crates/vtracer_wasm/Cargo.toml -- -D warnings
-```
+Node assert: header, giá trị 0/preset, hủy/race, palette, giới hạn SVG, 16 hồi quy WASM alpha, raster, xuất file, hình học, AI preprocessing/alpha/tile/cleanup/backend. Mock không thay inference thật; browser kiểm riêng UI, WebGL/CPU, ONNX, PDF, mạng.
+
+Dựng WASM khi sửa Rust:
 
 ```bash
 cargo build --locked --manifest-path crates/vtracer_wasm/Cargo.toml --release --target wasm32-unknown-unknown
@@ -43,28 +77,10 @@ cargo build --locked --manifest-path crates/vtracer_wasm/Cargo.toml --release --
 wasm-bindgen --target web --out-dir pkg crates/vtracer_wasm/target/wasm32-unknown-unknown/release/vtracer_wasm.wasm
 ```
 
-Phục vụ bằng HTTP, không mở qua `file://`:
+## Triển khai / backup
 
-```bash
-python -m http.server 8080 --bind 127.0.0.1
-```
+Workflow `.github/workflows/pages.yml`: Rust checks/build, npm test/build, Pages deploy khi push main. Chọn GitHub Actions làm nguồn Pages.
 
-## GitHub Pages
+Backup trước nâng cấp ngày 2026-11-11: commit 2327f2b tại nhánh `backup/pre-studio-20261111`; bản ZIP `../vtracer-web-backup-20261111.zip`, Git bundle `../vtracer-web-backup-20261111.bundle` trên máy phát triển. Nhánh nâng cấp `feature/local-vector-studio`. Build không ghi đè backup.
 
-Workflow `.github/workflows/pages.yml` kiểm tra Rust, build WASM, chỉ đưa file web/giấy phép vào artifact. Chọn GitHub Actions làm nguồn Pages. URL dự kiến https://zipra214.github.io/vtracer-web/ chỉ có hiệu lực sau deployment thành công.
-
-## Kiểm thử / giấy phép
-
-Rust unit tests: `crates/vtracer_wasm/src/lib.rs`. Hai bộ kiểm tra Node không cần dependency:
-
-```bash
-node test.mjs
-```
-
-```bash
-node tests/wasm-alpha.mjs
-```
-
-Bộ thứ nhất kiểm tra header ảnh, giới hạn trước giải mã và trạng thái khi rời trang. Bộ thứ hai chạy WASM thật, kiểm tra hình học alpha. Chúng không thay thế kiểm thử browser: trace thật, alpha render, hủy, lỗi đầu vào, layout. Chưa xác nhận Safari/macOS thực tế.
-
-Wrapper/giao diện: MIT. Logic converter/SVG dựa trên VTracer; xem `THIRD_PARTY_NOTICES.md`. Không dùng frontend proprietary upstream.
+Chưa kiểm trực tiếp Safari/macOS hoặc mọi GPU/driver; cần thử trên thiết bị đích trước cam kết chất lượng/tốc độ.

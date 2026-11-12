@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Kiểm chứng Upscale AI</title>
+<style>body{font:16px system-ui;margin:24px;color:#222}section{margin:24px 0}figure{display:inline-block;margin:8px}canvas{width:256px;height:256px;border:1px solid #ddd}figcaption{margin-top:6px}pre{white-space:pre-wrap}button{padding:12px}</style>
+<h1>Kiểm chứng Upscale AI tại máy</h1><p>Mẫu trang trí AI có sẵn trong dự án, không phải ảnh khách hàng. Ảnh chuẩn 128×128 được giảm còn 64×64 và làm mờ 0,4 px. So đầu ra AI với nội suy Canvas chất lượng cao ở cùng 128×128. PSNR cao hơn là gần mẫu chuẩn hơn; không chứng minh phục hồi chi tiết nguyên gốc.</p>
+<button id="run">Chạy phép thử</button><p id="status" role="status"></p><main id="results"></main>
+<script type="module">
+import {upscaleAI} from '../upscale-ai.js?v=scale-range-2';
+const $=id=>document.getElementById(id);
+function canvas(source,size,blur=0){const c=document.createElement('canvas');c.width=c.height=size;const x=c.getContext('2d');x.imageSmoothingQuality='high';x.filter=`blur(${blur}px)`;x.drawImage(source,0,0,size,size);return c;}
+function metrics(actual,reference){const size=reference.width,d=actual.getContext('2d').getImageData(0,0,size,size).data,t=reference.getContext('2d').getImageData(0,0,size,size).data;let squared=0,absolute=0,n=0;for(let i=0;i<d.length;i++)if(i%4!==3){squared+=(d[i]-t[i])**2;absolute+=Math.abs(d[i]-t[i]);n++;}return {psnr:10*Math.log10(255**2/(squared/n)),mae:absolute/n};}
+$('run').onclick=async()=>{ $('run').disabled=true;$('results').replaceChildren();const report=[];
+try{for(const file of ['kitten-photo.webp','kitten-illustration.webp']){
+ const image=new Image();image.src='../opendesign/mockups/vectorizer-reference/assets/welcome-sunburst-20261111/final/'+file;await image.decode();
+ const truth=canvas(image,128),low=canvas(truth,64,.4),baseline=canvas(low,128);
+ $('status').textContent='Đang chạy '+file;
+ const ai=await upscaleAI(low,2,{onProgress:n=>$('status').textContent=file+' · '+Math.round(n)+'%'});
+ if(ai.width!==128||ai.height!==128)throw Error('Sai kích thước AI');
+ const entry={file,input:[64,64],output:[ai.width,ai.height],blurPx:.4,baseline:metrics(baseline,truth),ai:metrics(ai,truth)};report.push(entry);
+ const section=document.createElement('section'),title=document.createElement('h2');title.textContent=file;section.append(title);
+ for(const [label,c] of [['Ảnh chuẩn',truth],['Nội suy thường',baseline],['AI ESRGAN 2×',ai]]){const figure=document.createElement('figure'),caption=document.createElement('figcaption');caption.textContent=label;figure.append(c,caption);section.append(figure);}
+ const text=document.createElement('pre');text.textContent=JSON.stringify(entry,null,2);section.append(text);$('results').append(section);
+ }
+ window.qualityReport=report;$('status').textContent='Hoàn tất. Số đo chỉ áp dụng hai mẫu này.';
+}catch(e){$('status').textContent='Lỗi: '+e.message;}finally{$('run').disabled=false;}};
+</script></html>

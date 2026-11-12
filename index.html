@@ -3,92 +3,37 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Vector hóa ảnh thành SVG ngay trong trình duyệt bằng VTracer WebAssembly.">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' blob: data:; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
-  <title>VTracer — Ảnh thành vector</title>
-  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
-  <link rel="stylesheet" href="./style.css">
-  <script type="module" src="./app.js"></script>
+  <meta name="description" content="Studio vector riêng tư: xóa nền, làm nét và chuyển ảnh thành SVG, PDF, EPS, DXF trên thiết bị.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>VTracer Studio — Vector trên thiết bị</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg"><link rel="stylesheet" href="./style.css"><script type="module" src="./app.js"></script>
 </head>
 <body>
-  <header><a class="brand" href="./">V<span>Tracer</span><small>WEB</small></a><a href="https://github.com/Zipra214/vtracer-web" target="_blank" rel="noopener noreferrer">Mã nguồn ↗</a></header>
-  <main>
-    <div class="intro"><p class="eyebrow">RASTER → VECTOR · WEBASSEMBLY</p><h1>Ảnh nhỏ.<br><span>Khả năng lớn.</span></h1><p>Biến ảnh thành SVG có thể chỉnh sửa.<br>Xử lý trên thiết bị, không cần tài khoản.</p></div>
-    <section class="workspace" aria-label="Công cụ vector hóa">
-      <aside class="settings">
-        <h2>01 <span>Ảnh đầu vào</span></h2>
-        <label class="drop" id="drop"><input id="file" type="file" accept="image/png,image/jpeg,image/webp,image/bmp"><strong>Chọn ảnh hoặc kéo thả</strong><span>PNG, JPEG, WebP, BMP · tối đa 20 MB</span><span>Cũng có thể dán ảnh bằng Ctrl / ⌘ + V</span></label>
-        <p id="file-info" class="muted">Chưa chọn ảnh · tối đa 16 triệu pixel</p>
-        <fieldset id="options">
-          <legend>02 <span>Thiết lập vector</span></legend>
-          <label for="preset">Mức chi tiết</label>
-          <select id="preset"><option value="don_gian">Đồ họa phẳng (Ít nét) — mặc định</option><option value="can_bang">Cân bằng</option><option value="chi_tiet">Giữ chi tiết cao</option><option value="custom">Tùy chỉnh thông số</option></select>
-          <p id="preset-info" class="muted">Khối màu lớn, ít path, phù hợp in ấn và cắt decal.</p>
-          <div class="alpha"><p>Nền ảnh</p><label><input type="radio" name="alpha" value="preserve" checked> Giữ nền trong suốt</label><label><input type="radio" name="alpha" value="white_background"> Ghép trên nền trắng</label></div>
-          <p class="muted">Giữ alpha: dưới 128 thành trong suốt, từ 128 thành đục. Không tự xóa nền trắng có sẵn.</p>
-
-          <details id="advanced-details" class="advanced-box">
-            <summary>Tùy chọn nâng cao (Tùy chỉnh thông số)</summary>
-            <div class="adv-grid">
-              <div class="adv-field">
-                <div class="adv-label-row"><label for="adv-speckle">Lọc hạt nhiễu (filter_speckle)</label><span class="adv-val" id="adv-speckle-val">8</span></div>
-                <input id="adv-speckle" type="number" min="0" max="100" step="1" value="8">
-                <small class="muted">Loại bỏ đốm màu nhỏ hơn diện tích pixel² (0–100). Số càng lớn càng sạch hạt nhiễu, SVG càng nhẹ.</small>
-              </div>
-              <div class="adv-field">
-                <div class="adv-label-row"><label for="adv-precision">Độ chính xác màu (color_precision)</label><span class="adv-val" id="adv-precision-val">4</span></div>
-                <input id="adv-precision" type="number" min="1" max="8" step="1" value="4">
-                <small class="muted">Số bit màu giữ lại mỗi kênh (1–8). Mức 8 giữ nguyên màu; mức thấp gom màu thành mảng phẳng.</small>
-              </div>
-              <div class="adv-field">
-                <div class="adv-label-row"><label for="adv-layer">Chênh lệch lớp màu (layer_difference)</label><span class="adv-val" id="adv-layer-val">32</span></div>
-                <input id="adv-layer" type="number" min="0" max="255" step="1" value="32">
-                <small class="muted">Ngưỡng tách biệt giữa các lớp màu chồng (0–255). Số lớn cho khối màu đơn giản; số nhỏ giữ nhiều lớp.</small>
-              </div>
-              <div class="adv-field">
-                <div class="adv-label-row"><label for="adv-corner">Ngưỡng góc nhọn (corner_threshold)</label><span class="adv-val" id="adv-corner-val">75°</span></div>
-                <input id="adv-corner" type="number" min="0" max="180" step="1" value="75">
-                <small class="muted">Góc nhỏ hơn ngưỡng này sẽ giữ nhọn; lớn hơn sẽ làm mượt thành đường cong (0–180 độ).</small>
-              </div>
-              <div class="adv-field">
-                <div class="adv-label-row"><label for="adv-path">Độ mịn đường cong (path_precision)</label><span class="adv-val" id="adv-path-val">2</span></div>
-                <input id="adv-path" type="number" min="-1" max="8" step="1" value="2">
-                <small class="muted">Số chữ số thập phân tọa độ SVG (-1 đến 8). Mức 2–3 tối ưu cho web; 5–8 cho in ấn; -1 giữ nguyên số thực.</small>
-              </div>
-            </div>
-          </details>
-
-          <div class="upscale-box">
-            <p class="upscale-title">Phóng to ảnh (Upscale AI)</p>
-            <label class="check-label"><input id="upscale-before-trace" type="checkbox"> Phóng to làm nét trước khi vector hóa</label>
-            <div class="upscale-row">
-              <label for="upscale-scale">Tỉ lệ</label>
-              <select id="upscale-scale"><option value="2">2x (Khuyên dùng)</option><option value="4">4x</option></select>
-              <button id="btn-upscale" type="button" class="secondary" disabled>Chỉ phóng to ảnh</button>
-            </div>
-            <p id="upscale-info" class="muted">Xử lý trực tiếp trên thiết bị (WebGL). Nút "Chỉ phóng to ảnh" cho phép tải file PNG sắc nét mà không cần tạo vector.</p>
-          </div>
-        </fieldset>
-        <div class="actions"><button id="convert" disabled>Chuyển thành SVG <span>↗</span></button><button id="cancel" class="secondary" hidden>Hủy xử lý</button></div>
-        <p id="status" role="status" aria-live="polite">Chọn ảnh để bắt đầu.</p>
-      </aside>
-      <div class="previews" id="previews" aria-busy="false">
-        <div class="preview-head"><h2>03 <span>Xem trước</span></h2><span class="badge" id="preview-badge">SVG · VECTOR</span></div>
-        <div class="preview-grid">
-          <figure><figcaption>Ảnh gốc <span id="source-size"></span></figcaption><div class="canvas"><img id="source" alt="Ảnh gốc đã chọn" hidden><p id="source-empty">Ảnh của bạn xuất hiện ở đây</p></div></figure>
-          <figure><figcaption>Kết quả <span id="result-size"></span></figcaption><div class="canvas"><img id="result" alt="Kết quả vector SVG hoặc PNG phóng to" hidden><p id="result-empty">Vector sắc nét hoặc PNG phóng to</p></div></figure>
-        </div>
-        <div class="result-bar">
-          <p id="stats">Đầu ra SVG thuần path, không nhúng ảnh raster.</p>
-          <div class="download-group">
-            <a id="download" class="download" hidden>Tải SVG ↓</a>
-            <a id="download-png" class="download download-png" hidden>Tải PNG phóng to ↓</a>
-          </div>
-        </div>
-        <p class="privacy">Ảnh không được mã ứng dụng tải lên máy chủ. Website vẫn tải HTML, JavaScript và WASM từ GitHub Pages.</p>
-      </div>
-    </section>
-    <footer><span>VTracer + visioncortex · Mã nguồn mở</span><span>Chuyển sắc và chi tiết nhỏ có thể thay đổi khi vector hóa.</span></footer>
-  </main>
-</body>
-</html>
+<a class="skip" href="#main">Đến công cụ</a>
+<header><a class="brand" href="./">VTracer <span>Studio</span></a><div class="header-right"><span class="local-badge">Xử lý tại máy</span><a href="https://github.com/Zipra214/vtracer-web" target="_blank" rel="noopener noreferrer">Mã nguồn ↗</a></div></header>
+<main id="main">
+<section class="intro"><div><h1>Từ ảnh đến đường nét.</h1><p>Xóa nền, tinh chỉnh màu và xuất vector. Ảnh không rời thiết bị.</p></div><button id="demo" class="quiet" type="button">Thử ảnh mẫu</button></section>
+<nav class="steps" aria-label="Các bước xử lý"><button data-step="1" aria-current="step">1 <span>Chọn ảnh</span></button><button data-step="2" disabled>2 <span>Chuẩn bị</span></button><button data-step="3" disabled>3 <span>Vector hóa</span></button><button data-step="4" disabled>4 <span>Chỉnh & xuất</span></button></nav>
+<section class="workspace" aria-label="Studio vector"><aside class="settings">
+<section id="step-1" class="step-panel"><h2>Đưa ảnh vào bàn làm việc</h2><p>Logo, hình minh họa và mẫu in màu phẳng cho kết quả tốt nhất.</p><label class="drop" id="drop"><input id="file" type="file" accept="image/png,image/jpeg,image/webp,image/bmp"><span class="upload-icon" aria-hidden="true">↑</span><strong>Chọn ảnh hoặc kéo thả</strong><span>PNG, JPEG, WebP, BMP</span><span>Ctrl / ⌘ + V để dán ảnh</span></label><p id="file-info" class="muted">Tối đa 20 MB · 16 triệu pixel · 10.000 px mỗi chiều.</p><p class="notice">Không cần tài khoản. Không gửi ảnh tới máy chủ. Thư viện và mô hình AI tải từ chính website khi cần.</p><button id="next-prepare" class="primary wide" disabled>Chuẩn bị ảnh</button></section>
+<section id="step-2" class="step-panel" hidden><h2>Chuẩn bị ảnh</h2><p>Không bắt buộc. Xử lý trên bản sao; ảnh gốc được giữ lại.</p><fieldset id="prepare-options">
+<label for="background-mode">Xóa nền</label><select id="background-mode"><option value="none">Giữ nguyên nền</option><option value="edge">Nền màu đồng nhất — từ mép ảnh</option><option value="color">Xóa màu trên toàn ảnh</option><option value="ai">AI tách chủ thể — ảnh chụp</option></select>
+<div id="background-color-options" hidden><div class="field-row"><label for="background-color">Màu nền</label><input id="background-color" type="color" value="#ffffff"><button id="pick-background" class="quiet" type="button" aria-pressed="false">Lấy màu</button></div><label for="background-tolerance">Dung sai màu <output id="tolerance-value">24</output></label><input id="background-tolerance" type="range" min="0" max="150" value="24"></div><p id="background-help" class="muted">Chế độ từ mép giữ vùng cùng màu bị bao kín bên trong.</p>
+<details><summary>Cắt vùng ảnh</summary><div class="number-grid"><label>X<input id="crop-x" type="number" min="0" step="1" value="0"></label><label>Y<input id="crop-y" type="number" min="0" step="1" value="0"></label><label>Rộng (px)<input id="crop-width" type="number" min="1" step="1" value="1"></label><label>Cao (px)<input id="crop-height" type="number" min="1" step="1" value="1"></label></div></details>
+<div class="field-separator"><label for="upscale-method">Phóng to / làm nét</label><select id="upscale-method"><option value="ai">AI ESRGAN — ưu tiên chất lượng</option><option value="classic">Nội suy + làm nét — nhanh, không AI</option></select><div class="field-row"><label for="upscale-scale">Tỉ lệ</label><select id="upscale-scale"><option value="2">2×</option><option value="4">4×</option></select></div><label for="sharpen-amount">Làm nét bổ sung <output id="sharpen-value">0.4</output></label><input id="sharpen-amount" type="range" min="0" max="1.5" step="0.1" value="0.4"><p id="upscale-info" class="notice">AI tự thử GPU qua WebGL, không dùng được thì chuyển CPU. Không thể xác định chắc card rời từ trình duyệt. AI có thể suy đoán chi tiết, không khôi phục chính xác ảnh mờ nặng.</p><label class="check-label"><input id="upscale-before-trace" type="checkbox"> Phóng to trước khi vector hóa</label><button id="btn-upscale" class="secondary wide" type="button" disabled>Chỉ phóng to & tải PNG</button></div>
+<label for="palette-limit">Giới hạn màu trước khi trace</label><select id="palette-limit"><option value="0">Giữ màu đầu vào</option><option value="4">4 màu</option><option value="8">8 màu</option><option value="16">16 màu</option><option value="32">32 màu</option><option value="64">64 màu</option></select><p class="muted">Lượng tử hóa raster; màu trung bình khi trace có thể tạo thêm màu.</p></fieldset><div class="actions"><button id="apply-prepare" class="secondary">Xem ảnh đã xử lý</button><button id="reset-prepare" class="quiet">Đặt lại</button></div><button id="next-trace" class="primary wide">Tiếp: vector hóa</button><a id="download-png" class="download" hidden>Tải PNG đã xử lý</a></section>
+<section id="step-3" class="step-panel" hidden><h2>Chọn cách dựng đường nét</h2><fieldset id="options"><label for="preset">Mức chi tiết</label><select id="preset"><option value="don_gian">Đồ họa phẳng — ít nét</option><option value="can_bang">Cân bằng</option><option value="chi_tiet">Giữ chi tiết cao</option><option value="custom">Tùy chỉnh thông số</option></select><p id="preset-info" class="muted">Khối màu lớn, ít path, phù hợp in ấn và cắt decal.</p><label for="trace-mode">Đường nét</label><select id="trace-mode"><option value="spline">Đường cong Bézier</option><option value="polygon">Đa giác — giữ cạnh thẳng</option><option value="none">Biên pixel — không làm mượt</option></select><label for="hierarchy">Cấu trúc vùng</label><select id="hierarchy"><option value="stacked">Chồng lớp — hạn chế khe màu</option><option value="cutout">Khoét vùng — hạn chế chồng mực</option></select><p class="muted">Khoét vùng vẫn cần kiểm tra đường biên trước khi cắt hoặc in.</p><label class="check-label"><input id="geometry-fit" type="checkbox"> Thử khớp hình chữ nhật / elip</label><p class="muted">Chỉ thay hình đơn, không lỗ, đủ gần hình học. Không chắc thì giữ đường cong gốc; có thể hoàn tác.</p><div class="alpha"><label class="check-label"><input type="radio" name="alpha" value="preserve" checked> Giữ nền trong suốt</label><label class="check-label"><input type="radio" name="alpha" value="white_background"> Ghép trên nền trắng</label><p class="muted">Vector dùng alpha nhị phân: dưới 128 trong suốt, từ 128 đục. PNG giữ alpha mềm.</p></div>
+<details id="advanced-details"><summary>Thông số nâng cao</summary><div class="adv-grid">
+<label>Lọc hạt nhiễu<input id="adv-speckle" type="number" min="0" max="100" step="1" value="8"><small>Loại vùng có diện tích dưới bình phương giá trị này. 8 tương ứng 64 px²; 0 giữ vùng nhỏ.</small></label>
+<label>Độ chính xác màu<input id="adv-precision" type="number" min="1" max="8" step="1" value="4"><small>Số bit giữ mỗi kênh RGB. Tăng giữ nhiều sắc độ, thường thêm vùng/path.</small></label>
+<label>Chênh lệch lớp màu<input id="adv-layer" type="number" min="0" max="255" step="1" value="32"><small>Ngưỡng phân tầng màu. Giá trị lớn thường gom nhiều màu gần nhau.</small></label>
+<label>Ngưỡng góc (độ)<input id="adv-corner" type="number" min="0" max="180" step="1" value="75"><small>Ngưỡng đổi hướng phân loại góc khi dựng spline. Giảm thường giữ thêm góc; kiểm tra nét thực tế.</small></label>
+<label>Độ chính xác tọa độ SVG<input id="adv-path" type="number" min="-1" max="8" step="1" value="2"><small>Số chữ số thập phân, không phải độ mịn. 2–3 thường đủ; -1 không làm tròn bằng tùy chọn này.</small></label>
+<label>Ngưỡng chiều dài<input id="adv-length" type="number" min="0.1" max="20" step="0.1" value="6"><small>Ngưỡng chia nhỏ đoạn khi làm mượt. Giảm có thể giữ thêm chi tiết, tăng thời gian.</small></label>
+<label>Ngưỡng nối spline (độ)<input id="adv-splice" type="number" min="0" max="180" step="1" value="60"><small>Ngưỡng đổi hướng để tách các đoạn spline; kết hợp với ngưỡng góc.</small></label>
+<label>Số vòng tối đa<input id="adv-iterations" type="number" min="1" max="20" step="1" value="10"><small>Giới hạn vòng tinh chỉnh đường cong. Tăng không đảm bảo đẹp hơn.</small></label>
+</div></details></fieldset><button id="convert" class="primary wide" disabled>Tạo vector</button></section>
+<section id="step-4" class="step-panel" hidden><h2>Tinh chỉnh & xuất</h2><p>Chạm vùng trong preview hoặc chọn vùng bên dưới. Có thể hoàn tác.</p><fieldset id="edit-options"><label for="path-select">Vùng vector</label><select id="path-select"><option value="">Chọn vùng</option></select><div class="field-row"><label for="region-color">Màu vùng</label><input id="region-color" type="color" value="#215cdb"><button id="recolor-region" class="secondary">Đổi màu</button></div><div class="actions"><button id="delete-region" class="quiet">Xóa vùng</button><button id="undo" class="quiet" disabled>Hoàn tác</button></div><h3>Bảng màu kết quả</h3><div id="palette" class="palette" aria-label="Bảng màu vector"></div><p id="palette-info" class="muted">Chọn màu để đổi hoặc xóa tất cả vùng cùng màu.</p><div class="actions"><button id="recolor-palette" class="secondary">Đổi màu đã chọn</button><button id="delete-palette" class="quiet">Xóa màu đã chọn</button></div><div class="field-separator"><h3>Xuất file</h3><div class="number-grid"><label>Rộng (mm)<input id="export-width" type="number" min="1" max="5000" step="0.1" value="200"></label><label>Cao (mm)<input id="export-height" type="number" min="1" max="5000" step="0.1" value="200"></label></div><label class="check-label"><input id="lock-ratio" type="checkbox" checked> Giữ tỷ lệ</label><label for="export-format">Định dạng</label><select id="export-format"><option value="svg">SVG — chỉnh sửa, web</option><option value="pdf">PDF — vector RGB</option><option value="eps">EPS — vector, không alpha mềm</option><option value="dxf">DXF — đường biên đa đoạn</option><option value="png">PNG — raster từ vector</option></select><label for="export-dpi">Độ phân giải PNG</label><select id="export-dpi"><option value="96">96 DPI</option><option value="150">150 DPI</option><option value="300" selected>300 DPI</option></select><p id="export-help" class="notice">SVG giữ vector và khổ mm. Đầu ra RGB, không chứng nhận CMYK/PDF/X hay đạt chuẩn máy in.</p><button id="export" class="primary wide" disabled>Tạo file tải xuống</button><a id="download" class="download" hidden>Tải file</a></div></fieldset></section>
+<div class="status-area"><progress id="progress" max="100" hidden aria-label="Tiến trình xử lý"></progress><p id="status" role="status" aria-live="polite">Chọn ảnh hoặc thử mẫu để bắt đầu.</p><button id="cancel" class="quiet wide" hidden>Hủy xử lý</button></div></aside>
+<section class="previews" id="previews" aria-label="Xem trước và so sánh" aria-busy="false"><div class="preview-toolbar"><div class="view-modes" role="group" aria-label="Chế độ xem"><button id="view-before" class="quiet">Gốc</button><button id="view-split" class="quiet" aria-pressed="true">So sánh</button><button id="view-after" class="quiet">Kết quả</button></div><div class="zoom-tools"><button id="zoom-out" class="quiet" aria-label="Thu nhỏ">−</button><output id="zoom-value">100%</output><button id="zoom-in" class="quiet" aria-label="Phóng to">+</button><button id="zoom-fit" class="quiet">Vừa khung</button><button id="zoom-actual" class="quiet">100%</button></div></div><div class="preview-labels"><span>Ảnh gốc <span id="source-size"></span></span><span id="preview-badge">Chưa có ảnh</span></div><div class="viewport" id="viewport" tabindex="0" aria-label="Bàn xem trước. Dùng nút zoom; kéo để di chuyển ảnh."><div class="stage" id="stage" hidden><img id="source" alt="Ảnh gốc" draggable="false"><div id="after-layer"><img id="result" alt="Ảnh đã xử lý" draggable="false" hidden><div id="vector-preview" hidden></div></div></div><div id="preview-empty"><div class="empty-mark" aria-hidden="true">⌘</div><h2>Ảnh của bạn, đường nét của bạn.</h2><p>Thả ảnh vào khung bên trái.<br>Phóng to và so từng chi tiết ngay tại đây.</p></div><div id="split-line" hidden aria-hidden="true"></div></div><div class="compare-control"><label for="compare">Gốc</label><input id="compare" type="range" min="0" max="100" value="50" aria-label="Vị trí thanh so sánh"><span>Kết quả</span></div><div class="preview-footer"><p id="stats">Vector thuần đường nét, không nhúng ảnh raster.</p><span id="result-size"></span></div><p class="privacy">Chỉ tải mã và mô hình từ website này. Ảnh, xóa nền, AI và xuất file đều xử lý trên thiết bị. AI có thể đổi chi tiết; luôn so với ảnh gốc.</p></section></section>
+<footer><span>VTracer + visioncortex · Studio mã nguồn mở</span><span>Không tự phục hồi chữ mờ hoặc chi tiết đã mất.</span></footer></main></body></html>

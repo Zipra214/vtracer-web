@@ -4,3 +4,6 @@
 *.log
 .claude/
 _site/
+node_modules/
+vendor/
+models/

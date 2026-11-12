@@ -28,19 +28,23 @@ jobs:
         run: |
           cargo install wasm-bindgen-cli --version 0.2.129 --locked
           wasm-bindgen --target web --out-dir pkg crates/vtracer_wasm/target/wasm32-unknown-unknown/release/vtracer_wasm.wasm
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install pinned browser dependencies
+        run: npm ci --ignore-scripts
       - name: Check browser code and WASM regressions
         run: |
           node --check app.js
           node --check worker.js
-          node test.mjs
-          node tests/wasm-alpha.mjs
+          npm test
+          node tests/upscale-ai.mjs
+          node --check opendesign/mockups/vectorizer-reference/reference.js
+          node opendesign/mockups/vectorizer-reference/palette.test.mjs
       - uses: actions/configure-pages@v5
-      - name: Package public files only
-        run: |
-          mkdir -p _site/pkg
-          cp index.html style.css app.js worker.js favicon.svg LICENSE THIRD_PARTY_NOTICES.md _site/
-          cp pkg/vtracer_wasm.js pkg/vtracer_wasm_bg.wasm _site/pkg/
-          cp -r licenses _site/
+      - name: Bundle local runtimes and package public files
+        run: npm run build
       - uses: actions/upload-pages-artifact@v4
         with:
           path: _site

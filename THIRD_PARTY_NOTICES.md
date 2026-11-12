@@ -10,6 +10,39 @@ Unicode terms remain applicable. The files linked below preserve local upstream
 license texts without changing copyright names, years, or template placeholders.
 Author metadata is not a replacement copyright notice.
 
+## Browser studio additions (2026-11-11)
+
+All runtime assets are self-hosted; no Vectorizer.AI source or API is used.
+Pinned npm dependency identities are recorded in package-lock.json.
+
+| Component | Version | License / provenance | Included license |
+| --- | --- | --- | --- |
+| UpscalerJS | 1.0.0 | MIT, Kevin Scott | licenses/browser/upscaler-MIT.txt |
+| ESRGAN Slim converted models x2/x4 | @upscalerjs/esrgan-slim 1.0.0 | Package distributes weights under MIT notice, not all ESRGAN models | licenses/browser/esrgan-slim-MIT.txt |
+| TensorFlow.js | 4.11.0 | Apache-2.0 | licenses/browser/tensorflow-Apache-2.0.txt |
+| Schibsted Grotesk webfont | Google Fonts distribution | SIL Open Font License 1.1, Schibsted-Grotesk Project Authors | licenses/browser/Schibsted-Grotesk-OFL.txt |
+| ONNX Runtime Web | 1.31.1 | MIT, Microsoft; third-party notices retained | licenses/browser/onnxruntime-MIT.txt, licenses/browser/onnxruntime-ThirdPartyNotices.txt |
+| U²-Net compact weights (u2netp) | SHA-256 below | Upstream U-2-Net Apache-2.0; ONNX hosted by rembg, not relicensed by rembg | licenses/browser/U2Net-Apache-2.0.txt |
+| jsPDF | 4.2.1 | MIT | licenses/browser/jspdf-MIT.txt |
+| svg2pdf.js | 2.9.0 | MIT | licenses/browser/svg2pdf-MIT.txt |
+
+U²-Net source: https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx
+
+SHA-256: `309c8469258dda742793dce0ebea8e6dd393174f89934733ecc8b14c76f4ddd8`.
+Asset copied unmodified and checksum-checked. Historical conversion checkpoint
+and toolchain are not independently established. Upstream:
+https://github.com/xuebinqin/U-2-Net . Credit Xuebin Qin, Zichen Zhang,
+Chenyang Huang, Masood Dehghan, Osmar R. Zaiane, Martin Jagersand,
+“U2-Net: Going Deeper with Nested U-Structure for Salient Object Detection”,
+Pattern Recognition 106 (2020), 107404.
+
+Browser preprocessing is independently written: max-normalized RGB/ImageNet
+statistics and resized saliency; bilinear resize differs from rembg's Pillow
+Lanczos implementation. AI does not guarantee accurate restoration. Keep model
+and runtime licenses distinct and retain all notices when redistributing.
+Bundle legal comments are preserved by scripts/vendor.mjs. esbuild is a build
+tool, not an application runtime.
+
 ## Components
 
 | Component | Version | Selected license | Local license copy |
